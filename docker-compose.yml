@@ -1,0 +1,64 @@
+version: "3.8"
+
+services:
+  java_app:
+    build:
+      context: .
+    container_name: expensesapp
+    networks:
+      - expenses-network
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/expenses_tracker?allowPublicKeyRetrieval=true&useSSL=false"
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Test@123
+    depends_on:
+      - mysql_db
+    restart: always
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL","curl -f http://localhost:8080 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  mysql_db:
+    image: mysql
+    container_name: mysql
+    networks:
+      - expenses-network
+    environment:
+      MYSQL_ROOT_PASSWORD: Test@123
+      MYSQL_DATABASE: expenses_tracker
+    restart: always
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD","mysqladmin", "ping", "-h", "localhost","-uroot","-pTest@123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+
+  nginx:
+    build: ./nginx
+    image: nginx
+    container_name: nginx
+    ports:
+      - "80:80"
+    restart: always
+    depends_on:
+      - java_app
+    networks:
+      - expenses-network
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
+
+networks:
+  expenses-network:
+volumes:
+  mysql-data:
